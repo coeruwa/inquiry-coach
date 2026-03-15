@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>メンメンレディオ 探究コーチ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Syne:wght@400;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #f5f2ed;
+  --surface:     #faf8f5;
+  --card:        #ffffff;
+  --border:      #e0d9cf;
+  --border-dark: #c8bfb0;
+  --ink:         #1a1612;
+  --ink-mid:     #4a4038;
+  --ink-muted:   #8a7d6e;
+  --accent:      #e8420a;
+  --accent-pale: #fff0eb;
+  --accent-dim:  rgba(232,66,10,0.15);
+  --teal:        #0a6e6e;
+  --teal-pale:   #e8f5f5;
+  --amber:       #b85c00;
+  --amber-pale:  #fff8e8;
+  --step-idle:   #ddd5c8;
+  --step-done:   #1a1612;
+  --step-active: #e8420a;
+  --radius:      14px;
+  --shadow:      0 2px 16px rgba(26,22,18,0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* subtle paper texture */
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(232,66,10,0.03) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(10,110,110,0.03) 0%, transparent 50%);
+}
+
+/* ═══════════════════════════════════════
+   HEADER
+═══════════════════════════════════════ */
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.9rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.logo-mark {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.header-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-dark);
+  flex-shrink: 0;
+}
+
+.header-info { flex: 1; min-width: 0; }
+
+.header-topic {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.4s;
+  height: 1.2em;
+}
+
+.header-topic.has-topic {
+  color: var(--ink-mid);
+  font-weight: 500;
+}
+
+/* Progress bar */
+.step-track {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.step-pip {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--step-idle);
+  transition: background 0.4s, transform 0.3s;
+  flex-shrink: 0;
+}
+.step-pip.done {
+  background: var(--step-done);
+}
+.step-pip.active {
+  background: var(--step-active);
+  transform: scale(1.3);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.step-name {
+  font-size: 0.7rem;
+  color: var(--ink-muted);
+  margin-left: 4px;
+  font-family: 'Syne', sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════
+   CHAT
+═══════════════════════════════════════ */
+#chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 1.25rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  scroll-behavior: smooth;
+}
+
+#chat::-webkit-scrollbar { width: 4px; }
+#chat::-webkit-scrollbar-track { background: transparent; }
+#chat::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 2px; }
+
+/* Messages */
+.msg {
+  display: flex;
+  gap: 0.75rem;
+  animation: slideUp 0.25s ease;
+  max-width: 84%;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.msg.user { align-self: flex-end; flex-direction: row-reverse; }
+.msg.ai   { align-self: flex-start; }
+
+.msg-avatar {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.msg.user .msg-avatar {
+  background: var(--ink);
+  color: var(--surface);
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 0.7rem;
+}
+
+.msg.ai .msg-avatar {
+  background: var(--accent);
+  color: white;
+  font-size: 0.9rem;
+}
+
+.msg-body { display: flex; flex-direction: column; gap: 4px; }
+
+/* Tag */
+.msg-tag {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 20px;
+  width: fit-content;
+}
+.tag-coach { background: var(--accent-dim); color: var(--accent); }
+.tag-vocab { background: var(--teal-pale); color: var(--teal); }
+.tag-guard { background: #ffeaea; color: #c0392b; }
+.tag-hint  { background: var(--amber-pale); color: var(--amber); }
+
+.msg-bubble {
+  padding: 0.8rem 1.1rem;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  line-height: 1.75;
+  position: relative;
+}
+
+.msg.user .msg-bubble {
+  background: var(--ink);
+  color: var(--surface);
+  border-bottom-right-radius: 4px;
+  font-weight: 500;
+}
+
+.msg.ai .msg-bubble {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+  box-shadow: var(--shadow);
+}
+
+/* Theme card */
+.theme-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow);
+  animation: slideUp 0.35s ease;
+}
+
+.theme-card-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 0.6rem;
+}
+
+.theme-card-title {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.theme-row {
+  margin-top: 0.6rem;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--ink-mid);
+}
+
+.theme-row strong {
+  font-weight: 700;
+  color: var(--ink);
+  display: block;
+  font-size: 0.75rem;
+  font-family: 'Syne', sans-serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+/* Typing */
+.typing-wrap {
+  display: flex; gap: 0.75rem;
+  align-self: flex-start;
+  animation: slideUp 0.2s ease;
+}
+
+.typing-bubble {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  border-bottom-left-radius: 4px;
+  padding: 0.9rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: var(--shadow);
+}
+
+.typing-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+  animation: blink 1.2s infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink {
+  0%,80%,100% { opacity: 0.3; transform: scale(0.9); }
+  40% { opacity: 1; transform: scale(1.1); }
+}
+
+.burst-count {
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+  margin-left: 6px;
+  font-family: 'Syne', sans-serif;
+}
+
+/* ═══════════════════════════════════════
+   QUICK REPLIES
+═══════════════════════════════════════ */
+#quick-replies {
+  padding: 0.5rem 1.25rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.chip {
+  background: var(--card);
+  border: 1px solid var(--border-dark);
+  color: var(--ink-mid);
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  transition: all 0.18s;
+  line-height: 1.4;
+}
+.chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-pale);
+}
+
+/* ═══════════════════════════════════════
+   INPUT
+═══════════════════════════════════════ */
+#input-area {
+  padding: 0.75rem 1.25rem 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+
+#user-input {
+  flex: 1;
+  background: var(--card);
+  border: 1.5px solid var(--border-dark);
+  color: var(--ink);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 0.95rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  resize: none;
+  outline: none;
+  min-height: 46px;
+  max-height: 130px;
+  line-height: 1.6;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+#user-input:focus {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(26,22,18,0.06);
+}
+#user-input::placeholder { color: var(--ink-muted); }
+
+#send-btn {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+#send-btn:hover {
+  background: var(--accent);
+  transform: scale(1.06);
+}
+#send-btn svg { width: 18px; height: 18px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">メンメン<br>レディオ</div>
+  <div class="header-divider"></div>
+  <div class="header-info">
+    <div class="header-topic" id="header-topic">なんでも探究コーチ</div>
+    <div class="step-track">
+      <div class="step-pip" id="pip0"></div>
+      <div class="step-pip" id="pip1"></div>
+      <div class="step-pip" id="pip2"></div>
+      <div class="step-pip" id="pip3"></div>
+      <div class="step-pip" id="pip4"></div>
+      <span class="step-name" id="step-name">START</span>
+    </div>
+  </div>
+</header>
+
+<div id="chat"></div>
+<div id="quick-replies"></div>
+
+<div id="input-area">
+  <textarea id="user-input" placeholder="気になること、なんでも話して…" rows="1"></textarea>
+  <button id="send-btn" aria-label="送信">
+    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13"/>
+      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+    </svg>
+  </button>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  STEP DEFINITIONS
+// ══════════════════════════════════════════
+const STEPS = [
+  { name: 'SPARK',    label: '興味を探る' },
+  { name: 'ZOOM',     label: '視点を絞る' },
+  { name: 'COMPARE',  label: '比べてみる' },
+  { name: 'SHARPEN',  label: '問いを磨く' },
+  { name: 'THEME',    label: 'テーマ完成' },
+];
+
+// ══════════════════════════════════════════
+//  NG PATTERNS
+// ══════════════════════════════════════════
+const NG = /おっぱい|ちんこ|うんこ|ちんちん|セックス|エッチ|変態|死ね|殺せ|バカ死ね|氏ね|クソ野郎/i;
+
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+let state = {
+  topic:       null,   // 探究テーマのキーワード（会話から自然に特定）
+  step:        0,
+  history:     [],
+  turnCount:   0,
+  stuckCount:  0,
+  lastContext: '',
+};
+
+// Queue / burst
+let queue       = [];
+let processing  = false;
+let burstTimer  = null;
+const BURST_MS  = 800;
+
+// ══════════════════════════════════════════
+//  DOM
+// ══════════════════════════════════════════
+const $chat    = document.getElementById('chat');
+const $input   = document.getElementById('user-input');
+const $send    = document.getElementById('send-btn');
+const $qr      = document.getElementById('quick-replies');
+const $topic   = document.getElementById('header-topic');
+const $sname   = document.getElementById('step-name');
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  updatePips(0);
+  aiMsg(
+    'こんにちは！<strong>探究コーチ</strong>です。🔍<br><br>' +
+    '勉強のこと、スポーツ、音楽、社会のこと、日常の謎……<br>' +
+    'なんでも OK。気になってることを話してみて。',
+    'coach'
+  );
+  setChips(['最近気になってること', '学校で疑問に思ったこと', 'なんか面白いことしたい', '好きなことから探したい']);
+});
+
+// ══════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════
+function scrollEnd() { $chat.scrollTop = $chat.scrollHeight; }
+
+function updatePips(step) {
+  for (let i = 0; i < 5; i++) {
+    const p = document.getElementById('pip' + i);
+    p.className = 'step-pip';
+    if (i < step)      p.classList.add('done');
+    else if (i === step) p.classList.add('active');
+  }
+  $sname.textContent = STEPS[Math.min(step, 4)].name;
+}
+
+function updateTopic(t) {
+  if (t && !state.topic) {
+    state.topic = t;
+    $topic.textContent = `「${t}」を探究中`;
+    $topic.classList.add('has-topic');
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+function aiMsg(html, tagKey = null) {
+  const tagMap = {
+    coach: ['COACH',  'tag-coach'],
+    vocab: ['用語解説', 'tag-vocab'],
+    guard: ['待って！', 'tag-guard'],
+    hint:  ['ヒント',  'tag-hint'],
+  };
+
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ai';
+
+  const av = document.createElement('div');
+  av.className = 'msg-avatar'; av.textContent = '✦';
+
+  const body = document.createElement('div');
+  body.className = 'msg-body';
+
+  if (tagKey && tagMap[tagKey]) {
+    const [label, cls] = tagMap[tagKey];
+    const tag = document.createElement('div');
+    tag.className = `msg-tag ${cls}`;
+    tag.textContent = label;
+    body.appendChild(tag);
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.innerHTML = html;
+  body.appendChild(bubble);
+
+  wrap.appendChild(av);
+  wrap.appendChild(body);
+  $chat.appendChild(wrap);
+  scrollEnd();
+}
+
+function userMsg(html) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg user';
+
+  const av = document.createElement('div');
+  av.className = 'msg-avatar'; av.textContent = 'YOU';
+
+  const body = document.createElement('div');
+  body.className = 'msg-body';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.innerHTML = html;
+  body.appendChild(bubble);
+
+  wrap.appendChild(av);
+  wrap.appendChild(body);
+  $chat.appendChild(wrap);
+  scrollEnd();
+}
+
+function showTyping() {
+  if (document.getElementById('typing-wrap')) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'typing-wrap'; wrap.id = 'typing-wrap';
+
+  const av = document.createElement('div');
+  av.className = 'msg-avatar'; av.textContent = '✦';
+  av.style.cssText = 'background:var(--accent);color:white;';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'typing-bubble';
+  for (let i=0;i<3;i++){const d=document.createElement('div');d.className='typing-dot';bubble.appendChild(d);}
+
+  wrap.appendChild(av); wrap.appendChild(bubble);
+  $chat.appendChild(wrap); scrollEnd();
+  return bubble;
+}
+
+function updateBurstLabel(n) {
+  const bubble = document.querySelector('.typing-bubble');
+  if (!bubble) return;
+  let lbl = bubble.querySelector('.burst-count');
+  if (!lbl) { lbl = document.createElement('span'); lbl.className = 'burst-count'; bubble.appendChild(lbl); }
+  lbl.textContent = n > 1 ? `${n}件まとめて考える…` : '';
+}
+
+function hideTyping() {
+  const el = document.getElementById('typing-wrap'); if (el) el.remove();
+}
+
+function setChips(arr) {
+  $qr.innerHTML = '';
+  arr.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'chip'; btn.textContent = c;
+    btn.onclick = () => { $input.value = c; handleSend(); };
+    $qr.appendChild(btn);
+  });
+}
+
+function showThemeCard(card) {
+  const el = document.createElement('div');
+  el.className = 'theme-card';
+  el.innerHTML = `
+    <div class="theme-card-label">📋 探究テーマ アドバイス</div>
+    <div class="theme-card-title">「${card.title}」</div>
+    <div class="theme-row"><strong>背景・問題意識</strong>${card.background}</div>
+    <div class="theme-row"><strong>次に調べること</strong>${card.nextSteps}</div>
+    <div class="theme-row"><strong>コーチより</strong>${card.advice}</div>
+  `;
+  $chat.appendChild(el);
+  scrollEnd();
+}
+
+// ══════════════════════════════════════════
+//  INPUT EVENTS
+// ══════════════════════════════════════════
+$send.addEventListener('click', handleSend);
+$input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); handleSend(); }
+});
+$input.addEventListener('input', () => {
+  $input.style.height = 'auto';
+  $input.style.height = Math.min($input.scrollHeight, 130) + 'px';
+});
+
+// ══════════════════════════════════════════
+//  SEND / QUEUE
+// ══════════════════════════════════════════
+function handleSend() {
+  const text = $input.value.trim();
+  if (!text) return;
+  $input.value = ''; $input.style.height = 'auto';
+  $qr.innerHTML = '';
+
+  // NG check
+  if (NG.test(text)) {
+    userMsg(escHtml(text));
+    const ctx = state.lastContext;
+    aiMsg(
+      ctx
+        ? `それは探究とは関係ないね。さっきの「${ctx}」の話に戻ろう。`
+        : `それは今の探究には関係ないね。気になってることを話してみて！`,
+      'guard'
+    );
+    return;
+  }
+
+  // キューに積んで画面に表示
+  queue.push(text);
+  userMsg(escHtml(text));
+
+  clearTimeout(burstTimer);
+
+  if (processing) {
+    // AI応答中 → burst labelだけ更新
+    updateBurstLabel(queue.length);
+    return;
+  }
+
+  burstTimer = setTimeout(flushQueue, BURST_MS);
+}
+
+async function flushQueue() {
+  if (queue.length === 0 || processing) return;
+  processing = true;
+
+  const burst = [...queue];
+  queue = [];
+
+  const isVocab  = burst.some(t => /知らん|わからん|どういう意味|って何|とは？|教えて/.test(t));
+  const combined = burst.join('\n');
+
+  state.turnCount++;
+  const short = combined.replace(/\n/g, '').length < 12 * burst.length;
+  if (short) state.stuckCount++; else state.stuckCount = 0;
+
+  state.history.push({ role: 'user', content: combined });
+  showTyping();
+  if (burst.length > 1) updateBurstLabel(burst.length);
+
+  try {
+    const reply = await callClaude(isVocab, burst.length);
+    hideTyping();
+
+    // ── topic detection ──
+    const topicMatch = reply.match(/"topic"\s*:\s*"([^"]+)"/);
+    if (topicMatch) updateTopic(topicMatch[1]);
+
+    // ── step ──
+    const stepMatch = reply.match(/"step"\s*:\s*(\d)/);
+    if (stepMatch) {
+      state.step = Math.min(parseInt(stepMatch[1]), 4);
+      updatePips(state.step);
+    }
+
+    // ── theme card ──
+    let card = null;
+    const cardMatch = reply.match(/THEME_CARD:([\s\S]+?)END_CARD/);
+    if (cardMatch) { try { card = JSON.parse(cardMatch[1].trim()); } catch(e){} }
+
+    // ── chips ──
+    let chips = [];
+    const chipsMatch = reply.match(/"chips"\s*:\s*(\[[^\]]+\])/);
+    if (chipsMatch) { try { chips = JSON.parse(chipsMatch[1]); } catch(e){} }
+
+    // ── tag ──
+    let tag = 'coach';
+    if (isVocab) tag = 'vocab';
+    if (/"hint"\s*:\s*true/.test(reply)) tag = 'hint';
+
+    // ── clean display ──
+    let display = reply
+      .replace(/\{[\s\S]*?\}/g, '')
+      .replace(/THEME_CARD:[\s\S]+?END_CARD/, '')
+      .trim();
+
+    // save context
+    const qm = display.match(/[^。！\n]*[？?]/);
+    if (qm) state.lastContext = qm[0].replace(/[「」]/g,'').trim();
+
+    aiMsg(display.replace(/\n/g,'<br>'), tag);
+    state.history.push({ role: 'assistant', content: reply });
+
+    if (card) showThemeCard(card);
+    if (chips.length) setChips(chips);
+
+  } catch(err) {
+    hideTyping();
+    aiMsg('ちょっと通信エラーが起きたみたい。もう一度試してみて！', 'guard');
+  }
+
+  processing = false;
+  if (queue.length > 0) burstTimer = setTimeout(flushQueue, BURST_MS);
+}
+
+// ══════════════════════════════════════════
+//  CLAUDE API
+// ══════════════════════════════════════════
+async function callClaude(isVocab, burstCount = 1) {
+  const isBurst = burstCount > 1;
+  const stuck   = state.stuckCount >= 2;
+
+  const system = `
+あなたは「探究コーチ」です。中学・高校生が自分だけの「探究テーマ（問い）」を見つけるサポートをします。
+対象はスポーツ・音楽・歴史・科学・社会問題・日常の謎など、あらゆるテーマに対応します。
+
+${isBurst ? `## 連続メッセージ（${burstCount}件）の処理ルール
+生徒が${burstCount}件のメッセージを連続して送りました（改行で区切られています）。
+すべてを総合的に読み、全体の意図をくみ取ってから「問いを1つ」だけ返してください。
+個別に返答せず、ひとまとまりの思考として受け止めること。
+` : ''}
+
+## 絶対ルール（最重要）
+- 返答には「問いを1つ」だけ含める。知識の説明・アドバイス・結論は禁止。
+- 「〜だよね」「〜が大事だよ」のような結論誘導は禁止。
+- 生徒が自分の言葉で考えられる問いを投げること。
+- 1回の返答は3〜5文以内に収める。
+
+## 例外（許可ルール）
+${stuck ? `★ 生徒が詰まっている（短い返答が続いている）。今回だけ、テーマに関連する具体的な事例や場面を1つだけヒントとして提示し、すぐ問いに戻ること。JSONに "hint": true を含める。` : ''}
+${isVocab ? `★ 「わからない」系の発言を検出。中学生でもわかる例えで用語・概念を1つだけ説明し、理解確認の後に探究の問いへ戻ること。` : ''}
+
+## 5段階の探究ステップ
+0 SPARK   : 何が気になる？（興味の棚卸し）
+1 ZOOM    : どこが・誰が・なぜ？（視点の分解）
+2 COMPARE : AとB、どっちが？なぜそう思う？（比較・仮説）
+3 SHARPEN : どんな条件で・いつ・どこで？（問いを絞る）
+4 THEME   : 探究テーマをまとめる
+
+現在のステップ: ${state.step}
+会話回数: ${state.turnCount}回目
+${state.topic ? `現在のテーマキーワード: 「${state.topic}」` : 'テーマ: まだ未特定'}
+
+## ステップ進行ルール
+- 生徒の返答が具体的・思考的 → 次のステップへ進む
+- 短い・薄い返答 → 同じステップに留まり、別角度の問いを投げる
+- 3往復目以降は積極的にStep3〜4のテーマ化を目指す
+- Step4に到達したら探究テーマカードを出す
+
+## テーマ特定ルール
+会話の中から生徒が探究したいテーマのキーワード（例：「給食」「SNS」「野球の打率」など）が
+明確になった最初のタイミングで、JSONに "topic": "キーワード" を含めること。
+
+## 良い問いの型（参考）
+「それってなんでだと思う？」
+「逆に〜だったら、どうなる？」
+「AとBを比べたら、どっちが〜だと思う？」
+「それっていつでも当てはまると思う？」
+「もし〜という条件が変わったら？」
+
+## 返答フォーマット（必ず最後にJSONを含める）
+返答テキスト（問い1つ含む）
+
+{"step": N, "topic": "テーマキーワード（初回特定時のみ）", "chips": ["返答候補1","返答候補2","返答候補3"]}
+
+Step4のテーマカード出力時は返答内に以下を含める：
+THEME_CARD:{"title":"探究テーマのタイトル","background":"背景・問題意識（2文）","nextSteps":"次に調べるべきこと","advice":"コーチからのひとこと"}
+END_CARD
+`.trim();
+
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system,
+      messages: state.history.slice(-14),
+    }),
+  });
+
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.content?.[0]?.text || '';
+}
+</script>
+</body>
+</html>
