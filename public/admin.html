@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>探究コーチ | 先生用ダッシュボード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Syne:wght@400;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #f5f2ed;
+  --surface:     #faf8f5;
+  --card:        #ffffff;
+  --border:      #e0d9cf;
+  --border-dark: #c8bfb0;
+  --ink:         #1a1612;
+  --ink-mid:     #4a4038;
+  --ink-muted:   #8a7d6e;
+  --accent:      #e8420a;
+  --accent-pale: #fff0eb;
+  --accent-dim:  rgba(232,66,10,0.15);
+  --teal:        #0a6e6e;
+  --teal-pale:   #e8f5f5;
+  --amber:       #b85c00;
+  --amber-pale:  #fff8e8;
+  --step-idle:   #ddd5c8;
+  --step-done:   #1a1612;
+  --step-active: #e8420a;
+  --radius:      14px;
+  --shadow:      0 2px 16px rgba(26,22,18,0.08);
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body {
+  font-family:'Noto Sans JP',sans-serif; background:var(--bg); color:var(--ink);
+  min-height:100dvh;
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(232,66,10,0.03) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(10,110,110,0.03) 0%, transparent 50%);
+}
+
+/* ═══ LOGIN ═══ */
+#login-screen {
+  min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:1rem;
+}
+.login-card {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:2.2rem; width:min(380px,100%);
+  display:flex; flex-direction:column; gap:1rem;
+}
+.login-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:0.85rem; color:var(--accent); }
+.login-title { font-family:'Noto Serif JP',serif; font-size:1.2rem; font-weight:700; }
+.login-desc { font-size:0.8rem; color:var(--ink-muted); line-height:1.7; }
+#login-pass {
+  padding:0.75rem 1rem; border:1.5px solid var(--border-dark); border-radius:10px;
+  font-family:'Noto Sans JP',sans-serif; font-size:0.95rem; outline:none; background:var(--bg);
+}
+#login-pass:focus { border-color:var(--ink); }
+.login-btn {
+  padding:0.8rem; border:none; border-radius:10px; background:var(--ink); color:white;
+  font-family:'Noto Sans JP',sans-serif; font-size:0.95rem; font-weight:700;
+  cursor:pointer; transition:all 0.2s;
+}
+.login-btn:hover { background:var(--accent); }
+#login-error { font-size:0.8rem; color:var(--accent); display:none; line-height:1.6; }
+
+/* ═══ DASHBOARD ═══ */
+#dashboard { display:none; }
+header {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:0.9rem 1.5rem; display:flex; align-items:center; gap:1rem;
+  position:sticky; top:0; z-index:10;
+}
+.logo-mark { font-family:'Syne',sans-serif; font-weight:800; font-size:1.05rem; color:var(--accent); white-space:nowrap; }
+.header-divider { width:1px; height:24px; background:var(--border-dark); }
+.header-title { font-size:0.9rem; font-weight:700; color:var(--ink-mid); }
+.header-actions { margin-left:auto; display:flex; gap:8px; }
+.hbtn {
+  padding:6px 14px; border-radius:8px; border:1px solid var(--border-dark);
+  background:var(--card); color:var(--ink-mid); font-family:'Noto Sans JP',sans-serif;
+  font-size:12px; font-weight:700; cursor:pointer; transition:all 0.2s;
+}
+.hbtn:hover { border-color:var(--accent); color:var(--accent); }
+
+main { max-width:1080px; margin:0 auto; padding:1.5rem 1.25rem 3rem; }
+
+/* ── stats ── */
+.stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:1.25rem; }
+.stat-card {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:14px 18px; box-shadow:var(--shadow);
+}
+.stat-label { font-family:'Syne',sans-serif; font-size:0.62rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-muted); margin-bottom:4px; }
+.stat-value { font-family:'Syne',sans-serif; font-size:1.6rem; font-weight:800; color:var(--ink); }
+.stat-value small { font-size:0.8rem; font-weight:700; color:var(--ink-muted); margin-left:2px; }
+
+/* ── filters ── */
+.filter-row { display:flex; gap:10px; margin-bottom:1rem; flex-wrap:wrap; align-items:center; }
+.filter-row select, .filter-row input {
+  padding:8px 12px; border:1px solid var(--border-dark); border-radius:9px;
+  font-family:'Noto Sans JP',sans-serif; font-size:13px; background:var(--card); color:var(--ink); outline:none;
+}
+.filter-row input { flex:1; min-width:180px; }
+.filter-row select:focus, .filter-row input:focus { border-color:var(--ink); }
+#last-updated { font-size:11px; color:var(--ink-muted); margin-left:auto; }
+
+/* ── table ── */
+.table-wrap {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  box-shadow:var(--shadow); overflow-x:auto;
+}
+table { width:100%; border-collapse:collapse; min-width:760px; }
+th {
+  text-align:left; font-family:'Syne',sans-serif; font-size:0.62rem; font-weight:700;
+  letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-muted);
+  padding:12px 14px; border-bottom:1px solid var(--border); white-space:nowrap;
+}
+td { padding:12px 14px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:middle; }
+tbody tr { cursor:pointer; transition:background 0.15s; }
+tbody tr:hover { background:var(--accent-pale); }
+tbody tr:last-child td { border-bottom:none; }
+.td-name { font-weight:700; white-space:nowrap; }
+.td-class { color:var(--ink-muted); font-size:12px; white-space:nowrap; }
+.td-topic { max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink-mid); }
+.td-topic.empty { color:var(--ink-muted); font-style:italic; }
+.td-num { text-align:center; font-family:'Syne',sans-serif; font-weight:700; }
+.td-time { font-size:12px; color:var(--ink-muted); white-space:nowrap; }
+
+.step-track { display:flex; align-items:center; gap:5px; }
+.step-pip { width:7px; height:7px; border-radius:50%; background:var(--step-idle); flex-shrink:0; }
+.step-pip.done { background:var(--step-done); }
+.step-pip.active { background:var(--step-active); box-shadow:0 0 0 2px var(--accent-dim); }
+.step-label { font-family:'Syne',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:0.05em; color:var(--ink-muted); margin-left:3px; }
+
+.theme-badge {
+  display:inline-block; background:var(--teal-pale); color:var(--teal);
+  border:1px solid rgba(10,110,110,0.25); border-radius:20px;
+  font-size:10px; font-weight:700; padding:2px 9px; white-space:nowrap;
+}
+
+.empty-state { padding:3rem 1rem; text-align:center; color:var(--ink-muted); font-size:13px; line-height:1.8; }
+
+/* ═══ DETAIL MODAL ═══ */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(26,22,18,0.45); backdrop-filter:blur(3px);
+  display:none; align-items:flex-start; justify-content:center; z-index:50;
+  padding:2rem 1rem; overflow-y:auto;
+}
+.modal-overlay.open { display:flex; }
+.detail-card {
+  background:var(--surface); border-radius:var(--radius); box-shadow:0 8px 40px rgba(26,22,18,0.3);
+  width:min(720px,100%); padding:1.75rem; display:flex; flex-direction:column; gap:1.1rem;
+}
+.detail-head { display:flex; align-items:flex-start; gap:1rem; }
+.detail-name { font-family:'Noto Serif JP',serif; font-size:1.3rem; font-weight:700; }
+.detail-meta { font-size:12px; color:var(--ink-muted); margin-top:3px; line-height:1.7; }
+.detail-close {
+  margin-left:auto; width:32px; height:32px; border-radius:8px; border:1px solid var(--border-dark);
+  background:var(--card); color:var(--ink-muted); font-size:15px; cursor:pointer; flex-shrink:0;
+}
+.detail-close:hover { color:var(--accent); border-color:var(--accent); }
+
+.detail-section-label {
+  font-family:'Syne',sans-serif; font-size:0.62rem; font-weight:700;
+  letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-muted); margin-bottom:8px;
+}
+.theme-card {
+  background:var(--card); border:1px solid var(--border); border-left:3px solid var(--ink);
+  border-radius:var(--radius); padding:1.1rem 1.3rem; box-shadow:var(--shadow);
+}
+.theme-card-title { font-family:'Noto Serif JP',serif; font-size:1rem; font-weight:700; line-height:1.5; margin-bottom:0.8rem; padding-bottom:0.6rem; border-bottom:1px solid var(--border); }
+.theme-row { margin-top:0.5rem; font-size:0.85rem; line-height:1.65; color:var(--ink-mid); }
+.theme-row strong { font-weight:700; color:var(--ink); display:block; font-size:0.7rem; font-family:'Syne',sans-serif; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:2px; }
+
+.research-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.research-chip {
+  background:var(--teal-pale); color:var(--teal); border:1px solid rgba(10,110,110,0.2);
+  border-radius:20px; font-size:12px; padding:4px 12px;
+}
+
+.chat-log {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  max-height:380px; overflow-y:auto; padding:1rem; display:flex; flex-direction:column; gap:0.7rem;
+}
+.log-msg { max-width:88%; padding:0.6rem 0.9rem; border-radius:12px; font-size:0.85rem; line-height:1.7; }
+.log-msg.user { align-self:flex-end; background:var(--ink); color:var(--surface); border-bottom-right-radius:4px; }
+.log-msg.ai   { align-self:flex-start; background:var(--bg); border:1px solid var(--border); border-bottom-left-radius:4px; }
+.log-empty { font-size:12px; color:var(--ink-muted); padding:0.5rem; }
+
+.detail-foot { display:flex; justify-content:flex-end; }
+.danger-btn {
+  padding:7px 14px; border-radius:8px; border:1px solid rgba(232,66,10,0.35);
+  background:transparent; color:var(--accent); font-family:'Noto Sans JP',sans-serif;
+  font-size:12px; font-weight:700; cursor:pointer; transition:all 0.2s;
+}
+.danger-btn:hover { background:var(--accent); color:white; }
+
+.loading { text-align:center; color:var(--ink-muted); font-size:13px; padding:2rem; }
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">メンメンレディオ 探究コーチ</div>
+    <div class="login-title">先生用ダッシュボード</div>
+    <div class="login-desc">管理者パスワードを入力してください。生徒の探究の進み具合・会話ログ・リサーチ履歴を確認できます。</div>
+    <input type="password" id="login-pass" placeholder="パスワード" autocomplete="current-password">
+    <div id="login-error"></div>
+    <button class="login-btn" onclick="login()">ログイン</button>
+  </div>
+</div>
+
+<!-- ═══ DASHBOARD ═══ -->
+<div id="dashboard">
+  <header>
+    <div class="logo-mark">メンメンレディオ</div>
+    <div class="header-divider"></div>
+    <div class="header-title">先生用ダッシュボード</div>
+    <div class="header-actions">
+      <button class="hbtn" onclick="loadList()">↻ 更新</button>
+      <button class="hbtn" onclick="logout()">ログアウト</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">登録生徒</div><div class="stat-value" id="stat-total">–<small>人</small></div></div>
+      <div class="stat-card"><div class="stat-label">テーマ完成</div><div class="stat-value" id="stat-theme">–<small>人</small></div></div>
+      <div class="stat-card"><div class="stat-label">今日の活動</div><div class="stat-value" id="stat-today">–<small>人</small></div></div>
+      <div class="stat-card"><div class="stat-label">リサーチ合計</div><div class="stat-value" id="stat-research">–<small>件</small></div></div>
+    </div>
+
+    <div class="filter-row">
+      <select id="filter-class" onchange="renderTable()"><option value="">全クラス</option></select>
+      <input type="text" id="filter-search" placeholder="名前・テーマで検索…" oninput="renderTable()">
+      <span id="last-updated"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>名前</th><th>クラス</th><th>探究テーマ</th><th>ステップ</th>
+            <th style="text-align:center">会話</th><th style="text-align:center">リサーチ</th><th>最終活動</th>
+          </tr>
+        </thead>
+        <tbody id="student-tbody"></tbody>
+      </table>
+      <div class="empty-state" id="empty-state" style="display:none">
+        まだ生徒のデータがありません。<br>
+        生徒が探究コーチで名前を登録して会話を始めると、ここに表示されます。
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ═══ DETAIL MODAL ═══ -->
+<div class="modal-overlay" id="detail-modal" onclick="if(event.target===this)closeDetail()">
+  <div class="detail-card" id="detail-card"></div>
+</div>
+
+<script>
+const PASS_KEY = 'menmen_admin_pass';
+const STEPS = ['SPARK', 'ZOOM', 'COMPARE', 'SHARPEN', 'THEME'];
+let students = [];
+let refreshTimer = null;
+
+// ══════ helpers ══════
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function relTime(iso) {
+  if (!iso) return '–';
+  const d = new Date(iso);
+  const diff = Date.now() - d.getTime();
+  if (diff < 60e3) return 'たった今';
+  if (diff < 3600e3) return Math.floor(diff / 60e3) + '分前';
+  if (diff < 86400e3) return Math.floor(diff / 3600e3) + '時間前';
+  if (diff < 7 * 86400e3) return Math.floor(diff / 86400e3) + '日前';
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+}
+function fullTime(iso) {
+  if (!iso) return '–';
+  const d = new Date(iso);
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function isToday(iso) {
+  if (!iso) return false;
+  const d = new Date(iso), n = new Date();
+  return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth() && d.getDate()===n.getDate();
+}
+function stepTrackHTML(step) {
+  let pips = '';
+  for (let i = 0; i < 5; i++) {
+    let cls = 'step-pip';
+    if (i < step) cls += ' done';
+    else if (i === step) cls += ' active';
+    pips += `<div class="${cls}"></div>`;
+  }
+  return `<div class="step-track">${pips}<span class="step-label">${STEPS[Math.min(step,4)]}</span></div>`;
+}
+// 生徒の生ログからJSON・カード部分を除いた表示用テキストを作る
+function cleanAssistantText(raw) {
+  return String(raw || '')
+    .replace(/THEME_CARD:[\s\S]+?END_CARD/g, '')
+    .replace(/\{[\s\S]*?\}/g, '')
+    .trim();
+}
+
+// ══════ API ══════
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Admin-Password': sessionStorage.getItem(PASS_KEY) || '',
+      ...(opts.headers || {}),
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    logout(data.error || 'パスワードが違います');
+    throw new Error('unauthorized');
+  }
+  if (!res.ok) throw new Error(data.error || '通信エラーが発生しました');
+  return data;
+}
+
+// ══════ auth ══════
+async function login() {
+  const pass = document.getElementById('login-pass').value || sessionStorage.getItem(PASS_KEY) || '';
+  const err = document.getElementById('login-error');
+  if (!pass) { err.textContent = 'パスワードを入力してください'; err.style.display = 'block'; return; }
+  sessionStorage.setItem(PASS_KEY, pass);
+  err.style.display = 'none';
+  try {
+    await loadList();
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    clearInterval(refreshTimer);
+    refreshTimer = setInterval(loadList, 60000);
+  } catch (e) {
+    if (e.message !== 'unauthorized') { err.textContent = e.message; err.style.display = 'block'; }
+  }
+}
+function logout(message) {
+  sessionStorage.removeItem(PASS_KEY);
+  clearInterval(refreshTimer);
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  const err = document.getElementById('login-error');
+  if (message) { err.textContent = message; err.style.display = 'block'; }
+}
+document.getElementById('login-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+
+// 前回のパスワードが残っていれば自動ログイン
+window.addEventListener('DOMContentLoaded', () => {
+  if (sessionStorage.getItem(PASS_KEY)) login();
+});
+
+// ══════ list ══════
+async function loadList() {
+  const data = await api('/api/admin');
+  students = data.students || [];
+  renderStats();
+  renderClassFilter();
+  renderTable();
+  document.getElementById('last-updated').textContent = '最終更新: ' + fullTime(new Date().toISOString());
+}
+
+function renderStats() {
+  document.getElementById('stat-total').innerHTML = students.length + '<small>人</small>';
+  document.getElementById('stat-theme').innerHTML = students.filter(s => s.has_theme || s.step >= 4).length + '<small>人</small>';
+  document.getElementById('stat-today').innerHTML = students.filter(s => isToday(s.updated_at)).length + '<small>人</small>';
+  document.getElementById('stat-research').innerHTML = students.reduce((a, s) => a + (s.research_count || 0), 0) + '<small>件</small>';
+}
+
+function renderClassFilter() {
+  const sel = document.getElementById('filter-class');
+  const current = sel.value;
+  const classes = [...new Set(students.map(s => s.class_name).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">全クラス</option>' +
+    classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if (classes.includes(current)) sel.value = current;
+}
+
+function renderTable() {
+  const cls = document.getElementById('filter-class').value;
+  const q = document.getElementById('filter-search').value.trim().toLowerCase();
+  const rows = students.filter(s => {
+    if (cls && s.class_name !== cls) return false;
+    if (q && !(`${s.name} ${s.topic || ''}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
+  const tbody = document.getElementById('student-tbody');
+  document.getElementById('empty-state').style.display = rows.length === 0 ? 'block' : 'none';
+  tbody.innerHTML = rows.map(s => `
+    <tr onclick="openDetail('${esc(s.id)}')">
+      <td class="td-name">${esc(s.name)}</td>
+      <td class="td-class">${esc(s.class_name) || '–'}</td>
+      <td class="td-topic ${s.topic ? '' : 'empty'}">
+        ${s.topic ? esc(s.topic) : 'まだ探索中'}
+        ${s.has_theme ? ' <span class="theme-badge">✓ テーマ決定</span>' : ''}
+      </td>
+      <td>${stepTrackHTML(s.step || 0)}</td>
+      <td class="td-num">${s.turn_count || 0}</td>
+      <td class="td-num">${s.research_count || 0}</td>
+      <td class="td-time">${relTime(s.updated_at)}</td>
+    </tr>`).join('');
+}
+
+// ══════ detail ══════
+async function openDetail(id) {
+  const modal = document.getElementById('detail-modal');
+  const card = document.getElementById('detail-card');
+  modal.classList.add('open');
+  card.innerHTML = '<div class="loading">読み込み中…</div>';
+  try {
+    const { student: s } = await api('/api/admin?id=' + encodeURIComponent(id));
+    const history = Array.isArray(s.history) ? s.history : [];
+    const research = Array.isArray(s.research_history) ? s.research_history : [];
+    const tc = s.theme_card;
+
+    const themeHTML = tc ? `
+      <div>
+        <div class="detail-section-label">📋 探究テーマカード</div>
+        <div class="theme-card">
+          <div class="theme-card-title">「${esc(tc.title)}」</div>
+          <div class="theme-row"><strong>背景・問題意識</strong>${esc(tc.background)}</div>
+          <div class="theme-row"><strong>次に調べること</strong>${esc(tc.nextSteps)}</div>
+          <div class="theme-row"><strong>コーチより</strong>${esc(tc.advice)}</div>
+        </div>
+      </div>` : '';
+
+    const researchHTML = `
+      <div>
+        <div class="detail-section-label">🔍 リサーチしたキーワード（${research.length}件）</div>
+        ${research.length
+          ? `<div class="research-chips">${research.map(r => `<span class="research-chip">${esc(r.keyword)}</span>`).join('')}</div>`
+          : '<div class="log-empty">まだリサーチしていません</div>'}
+      </div>`;
+
+    const logHTML = `
+      <div>
+        <div class="detail-section-label">💬 コーチングの会話ログ（${history.length}件）</div>
+        <div class="chat-log" id="chat-log">
+          ${history.length
+            ? history.map(m => {
+                const text = m.role === 'user' ? String(m.content || '') : cleanAssistantText(m.content);
+                if (!text) return '';
+                return `<div class="log-msg ${m.role === 'user' ? 'user' : 'ai'}">${esc(text).replace(/\n/g,'<br>')}</div>`;
+              }).join('')
+            : '<div class="log-empty">まだ会話がありません</div>'}
+        </div>
+      </div>`;
+
+    card.innerHTML = `
+      <div class="detail-head">
+        <div>
+          <div class="detail-name">${esc(s.name)}</div>
+          <div class="detail-meta">
+            ${esc(s.class_name) || 'クラス未設定'} ／
+            現在: ${s.topic ? '「' + esc(s.topic) + '」を探究中' : 'テーマ探索中'}<br>
+            開始: ${fullTime(s.created_at)} ／ 最終活動: ${fullTime(s.updated_at)}
+          </div>
+          <div style="margin-top:8px">${stepTrackHTML(s.step || 0)}</div>
+        </div>
+        <button class="detail-close" onclick="closeDetail()">✕</button>
+      </div>
+      ${themeHTML}
+      ${researchHTML}
+      ${logHTML}
+      <div class="detail-foot">
+        <button class="danger-btn" onclick="deleteStudent('${esc(s.id)}', '${esc(s.name)}')">この生徒のデータを削除</button>
+      </div>`;
+    const log = document.getElementById('chat-log');
+    if (log) log.scrollTop = log.scrollHeight;
+  } catch (e) {
+    if (e.message !== 'unauthorized') card.innerHTML = `<div class="loading">${esc(e.message)}</div>`;
+  }
+}
+function closeDetail() {
+  document.getElementById('detail-modal').classList.remove('open');
+}
+async function deleteStudent(id, name) {
+  if (!confirm(`「${name}」さんのデータを完全に削除します。よろしいですか？`)) return;
+  try {
+    await api('/api/admin?id=' + encodeURIComponent(id), { method: 'DELETE' });
+    closeDetail();
+    await loadList();
+  } catch (e) {
+    if (e.message !== 'unauthorized') alert(e.message);
+  }
+}
+</script>
+</body>
+</html>

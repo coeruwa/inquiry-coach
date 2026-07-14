@@ -344,9 +344,66 @@ header {
   background:var(--accent-pale); border:1px solid rgba(232,66,10,0.2);
   border-radius:var(--radius); padding:14px 18px; font-size:13px; color:var(--accent); line-height:1.6;
 }
+
+/* ═══ STUDENT MODAL ═══ */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(26,22,18,0.45);
+  display:flex; align-items:center; justify-content:center; z-index:100;
+  backdrop-filter:blur(3px); padding:1rem;
+}
+.modal-overlay.hidden { display:none; }
+.modal-card {
+  background:var(--card); border-radius:var(--radius);
+  box-shadow:0 8px 40px rgba(26,22,18,0.25);
+  padding:2rem; width:min(400px, 100%);
+  display:flex; flex-direction:column; gap:0.9rem;
+}
+.modal-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:0.85rem; color:var(--accent); letter-spacing:0.02em; }
+.modal-title { font-family:'Noto Serif JP',serif; font-size:1.15rem; font-weight:700; color:var(--ink); }
+.modal-desc { font-size:0.82rem; color:var(--ink-muted); line-height:1.7; }
+.modal-field label { display:block; font-size:0.72rem; font-weight:700; color:var(--ink-mid); margin-bottom:5px; }
+.modal-field input {
+  width:100%; padding:0.7rem 0.9rem; border:1.5px solid var(--border-dark); border-radius:10px;
+  font-family:'Noto Sans JP',sans-serif; font-size:0.95rem; outline:none;
+  background:var(--bg); color:var(--ink); transition:border-color 0.2s;
+}
+.modal-field input:focus { border-color:var(--ink); }
+.modal-btn {
+  margin-top:0.4rem; padding:0.8rem; border:none; border-radius:10px;
+  background:var(--ink); color:white; font-family:'Noto Sans JP',sans-serif;
+  font-size:0.95rem; font-weight:700; cursor:pointer; transition:all 0.2s;
+}
+.modal-btn:hover { background:var(--accent); }
+.modal-error { font-size:0.78rem; color:var(--accent); display:none; }
+
+.reset-btn {
+  background:transparent; border:1px solid var(--border-dark); color:var(--ink-muted);
+  width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:13px;
+  flex-shrink:0; transition:all 0.2s;
+}
+.reset-btn:hover { color:var(--accent); border-color:var(--accent); }
 </style>
 </head>
 <body>
+
+<!-- ═══ STUDENT REGISTRATION MODAL ═══ -->
+<div class="modal-overlay hidden" id="student-modal">
+  <div class="modal-card">
+    <div class="modal-logo">メンメンレディオ 探究コーチ</div>
+    <div class="modal-title">はじめまして！きみのことを教えてね</div>
+    <div class="modal-desc">入力した名前とクラスは、先生が探究の進み具合を見守るために使われるよ。</div>
+    <div class="modal-field">
+      <label>クラス（例：2年A組）</label>
+      <input type="text" id="student-class" placeholder="2年A組" maxlength="30">
+    </div>
+    <div class="modal-field">
+      <label>名前</label>
+      <input type="text" id="student-name" placeholder="山田 花子" maxlength="50">
+    </div>
+    <div class="modal-error" id="student-error">名前を入力してね</div>
+    <button class="modal-btn" onclick="registerStudent()">はじめる</button>
+  </div>
+</div>
 
 <header>
   <div class="logo-mark">メンメン<br>レディオ</div>
@@ -366,6 +423,7 @@ header {
     <button class="tab-btn active" id="tab-coach" onclick="switchTab('coach')">✦ コーチング</button>
     <button class="tab-btn" id="tab-research" onclick="switchTab('research')">🔍 リサーチ</button>
   </div>
+  <button class="reset-btn" id="reset-btn" title="会話をリセットして最初から" onclick="resetCoach()">↺</button>
 </header>
 
 <!-- ═══ COACHING SCREEN ═══ -->
@@ -443,6 +501,7 @@ let state = {
   turnCount:   0,
   stuckCount:  0,
   lastContext: '',
+  themeCard:   null,
 };
 
 let queue      = [];
@@ -461,19 +520,129 @@ const $topic = document.getElementById('header-topic');
 const $sname = document.getElementById('step-name');
 
 // ══════════════════════════════════════════
-//  INIT
+//  STUDENT IDENTITY / INIT
 // ══════════════════════════════════════════
+const STUDENT_KEY = 'menmen_student';
+const COACH_KEY   = 'menmen_coach_state';
+let student = null;
+
+function loadStudent() {
+  try { return JSON.parse(localStorage.getItem(STUDENT_KEY) || 'null'); } catch { return null; }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   restoreHistory();
-  updatePips(0);
-  const greeting =
-    'こんにちは！探究コーチです。🔍\n\n' +
-    '勉強のこと、スポーツ、音楽、社会のこと、日常の謎……\n' +
-    'なんでも OK。気になってることを話してみて。';
-  aiMsg(greeting.replace(/\n/g, '<br>'), 'coach');
-  state.history.push({ role: 'assistant', content: greeting });
-  setChips(['最近「なんでだろう？」って思ったことある？', '気になるニュースや出来事はある？', '好きなことや興味のあることは何？']);
+  student = loadStudent();
+  if (student && student.id && student.name) {
+    initCoach();
+  } else {
+    document.getElementById('student-modal').classList.remove('hidden');
+  }
 });
+
+function registerStudent() {
+  const name = document.getElementById('student-name').value.trim();
+  const cls  = document.getElementById('student-class').value.trim();
+  if (!name) {
+    document.getElementById('student-error').style.display = 'block';
+    return;
+  }
+  student = {
+    id: (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : 'st_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+    name,
+    className: cls,
+  };
+  localStorage.setItem(STUDENT_KEY, JSON.stringify(student));
+  document.getElementById('student-modal').classList.add('hidden');
+  initCoach();
+  syncProgress(); // 先生側の一覧にすぐ表示されるよう初回同期
+}
+
+function initCoach() {
+  const saved = loadCoachState();
+  if (saved && Array.isArray(saved.history) && saved.history.length > 0) {
+    // 前回の会話を復元
+    state.step       = saved.step || 0;
+    state.history    = saved.history;
+    state.turnCount  = saved.turnCount || 0;
+    state.themeCard  = saved.themeCard || null;
+    updatePips(state.step);
+    if (saved.topic) updateTopic(saved.topic);
+    state.history.forEach((m, i) => {
+      if (m.role === 'user') userMsg(escHtml(m.content));
+      else renderAssistantReply(m.content, { live: false, showChips: i === state.history.length - 1 });
+    });
+  } else {
+    updatePips(0);
+    const greeting =
+      'こんにちは！探究コーチです。🔍\n\n' +
+      '勉強のこと、スポーツ、音楽、社会のこと、日常の謎……\n' +
+      'なんでも OK。気になってることを話してみて。';
+    aiMsg(greeting.replace(/\n/g, '<br>'), 'coach');
+    state.history.push({ role: 'assistant', content: greeting });
+    setChips(['最近「なんでだろう？」って思ったことある？', '気になるニュースや出来事はある？', '好きなことや興味のあることは何？']);
+  }
+}
+
+function resetCoach() {
+  if (!confirm('会話をリセットして、最初からはじめる？')) return;
+  localStorage.removeItem(COACH_KEY);
+  state = { topic:null, step:0, history:[], turnCount:0, stuckCount:0, lastContext:'', themeCard:null };
+  $chat.innerHTML = '';
+  $qr.innerHTML = '';
+  $topic.classList.remove('has-topic');
+  $topic.textContent = 'なんでも探究コーチ';
+  initCoach();
+  scheduleSync();
+}
+
+// ══════════════════════════════════════════
+//  PERSISTENCE & PROGRESS SYNC
+// ══════════════════════════════════════════
+function saveCoachState() {
+  try {
+    localStorage.setItem(COACH_KEY, JSON.stringify({
+      topic:     state.topic,
+      step:      state.step,
+      history:   state.history.slice(-100),
+      turnCount: state.turnCount,
+      themeCard: state.themeCard,
+    }));
+  } catch (e) {}
+}
+function loadCoachState() {
+  try { return JSON.parse(localStorage.getItem(COACH_KEY) || 'null'); } catch { return null; }
+}
+
+let syncTimer = null;
+function scheduleSync() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncProgress, 1200);
+}
+async function syncProgress() {
+  if (!student) return;
+  try {
+    const research = loadHistory().filter(i => i.type === 'result');
+    await fetch('/api/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentId:     student.id,
+        name:          student.name,
+        className:     student.className || '',
+        topic:         state.topic,
+        step:          state.step,
+        turnCount:     state.turnCount,
+        researchCount: research.length,
+        themeCard:     state.themeCard || null,
+        history:       state.history.slice(-100),
+        researchHistory: research.slice(0, 50).map(i => ({ keyword: i.keyword, at: i.at || null })),
+      }),
+    });
+  } catch (e) { /* 同期失敗は生徒の操作を妨げない */ }
+}
 
 // ══════════════════════════════════════════
 //  HELPERS
@@ -601,6 +770,46 @@ function showThemeCard(card) {
 }
 
 // ══════════════════════════════════════════
+//  ASSISTANT REPLY RENDERING（新規表示・復元 共通）
+// ══════════════════════════════════════════
+function renderAssistantReply(reply, { live = true, showChips = true } = {}) {
+  const topicMatch = reply.match(/"topic"\s*:\s*"([^"]+)"/);
+  if (topicMatch) updateTopic(topicMatch[1]);
+  const stepMatch = reply.match(/"step"\s*:\s*(\d)/);
+  if (stepMatch) updatePips(Math.min(parseInt(stepMatch[1]), 4));
+  let card = null;
+  const cardMatch = reply.match(/THEME_CARD:([\s\S]+?)END_CARD/);
+  if (cardMatch) { try { card = JSON.parse(cardMatch[1].trim()); } catch(e){} }
+  let chips = [];
+  const chipsMatch = reply.match(/"chips"\s*:\s*(\[[^\]]+\])/);
+  if (chipsMatch) { try { chips = JSON.parse(chipsMatch[1]); } catch(e){} }
+  let tag = 'coach';
+  if (/"vocab"\s*:\s*true/.test(reply)) tag = 'vocab';
+  if (/"hint"\s*:\s*true/.test(reply))  tag = 'hint';
+  let display = reply
+    .replace(/\{[\s\S]*?\}/g, '')
+    .replace(/THEME_CARD:[\s\S]+?END_CARD/, '')
+    .trim();
+  display = display
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/^#{1,3}\s+(.+)$/gm, '<strong>$1</strong>')
+    .replace(/^[-*]\s+/gm, '・')
+    .replace(/\n/g, '<br>');
+  if (live) {
+    const qm = display.match(/[^。！\n]*[？?]/);
+    if (qm) state.lastContext = qm[0].replace(/[「」]/g,'').trim();
+  }
+  aiMsg(display, tag);
+  if (card) {
+    showThemeCard(card);
+    state.themeCard = card;
+  }
+  if (showChips && chips.length) setChips(chips);
+}
+
+// ══════════════════════════════════════════
 //  INPUT EVENTS
 // ══════════════════════════════════════════
 $send.addEventListener('click', handleSend);
@@ -644,41 +853,16 @@ async function flushQueue() {
   const short = combined.replace(/\n/g, '').length < 12 * burst.length;
   if (short) state.stuckCount++; else state.stuckCount = 0;
   state.history.push({ role: 'user', content: combined });
+  saveCoachState();
   showTyping();
   if (burst.length > 1) updateBurstLabel(burst.length);
   try {
     const reply = await callClaude(burst.length);
     hideTyping();
-    const topicMatch = reply.match(/"topic"\s*:\s*"([^"]+)"/);
-    if (topicMatch) updateTopic(topicMatch[1]);
-    const stepMatch = reply.match(/"step"\s*:\s*(\d)/);
-    if (stepMatch) updatePips(Math.min(parseInt(stepMatch[1]), 4));
-    let card = null;
-    const cardMatch = reply.match(/THEME_CARD:([\s\S]+?)END_CARD/);
-    if (cardMatch) { try { card = JSON.parse(cardMatch[1].trim()); } catch(e){} }
-    let chips = [];
-    const chipsMatch = reply.match(/"chips"\s*:\s*(\[[^\]]+\])/);
-    if (chipsMatch) { try { chips = JSON.parse(chipsMatch[1]); } catch(e){} }
-    let tag = 'coach';
-    if (/"vocab"\s*:\s*true/.test(reply)) tag = 'vocab';
-    if (/"hint"\s*:\s*true/.test(reply))  tag = 'hint';
-    let display = reply
-      .replace(/\{[\s\S]*?\}/g, '')
-      .replace(/THEME_CARD:[\s\S]+?END_CARD/, '')
-      .trim();
-    display = display
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/`(.+?)`/g, '<code>$1</code>')
-      .replace(/^#{1,3}\s+(.+)$/gm, '<strong>$1</strong>')
-      .replace(/^[-*]\s+/gm, '・')
-      .replace(/\n/g, '<br>');
-    const qm = display.match(/[^。！\n]*[？?]/);
-    if (qm) state.lastContext = qm[0].replace(/[「」]/g,'').trim();
-    aiMsg(display, tag);
+    renderAssistantReply(reply);
     state.history.push({ role: 'assistant', content: reply });
-    if (card)        showThemeCard(card);
-    if (chips.length) setChips(chips);
+    saveCoachState();
+    scheduleSync();
   } catch(err) {
     hideTyping();
     aiMsg('ちょっと通信エラーが起きたみたい。もう一度試してみて！', 'guard');
@@ -779,7 +963,7 @@ THEME_CARD:{"title":"探究テーマのタイトル","background":"背景・問�
 END_CARD
 `.trim();
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -826,7 +1010,7 @@ async function judgeCredibilityByAI(sources) {
   if (sources.length === 0) return sources;
   const list = sources.map((s, i) => `${i}: ${s.title} (${s.url})`).join('\n');
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -867,9 +1051,11 @@ ${list}
 const HISTORY_KEY = 'menmen_research_history';
 
 function saveHistoryItem(item) {
+  if (!item.at) item.at = Date.now();
   const history = loadHistory();
   history.unshift(item);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  scheduleSync(); // リサーチ結果も先生ページへ同期
 }
 function loadHistory() {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; }
@@ -1072,7 +1258,7 @@ function extractContent(blocks) {
 }
 
 async function callAPI(payload) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -1083,7 +1269,7 @@ async function callAPI(payload) {
   // pause_turn のとき: 1回目のcontentを保持しつつ続きを取得
   const allContent = [...(data.content || [])];
   while (data.stop_reason === 'pause_turn') {
-    const res2 = await fetch('https://api.anthropic.com/v1/messages', {
+    const res2 = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
