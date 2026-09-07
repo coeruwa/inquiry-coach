@@ -967,7 +967,7 @@ END_CARD
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-5',
       max_tokens: 1000,
       system,
       messages: state.history.slice(-14),
@@ -1014,7 +1014,7 @@ async function judgeCredibilityByAI(sources) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-5',
         max_tokens: 300,
         messages: [{ role: 'user', content:
           `以下のWebサイトそれぞれについて、中高生の探究学習における情報源としての信頼性を判定してください。
@@ -1333,7 +1333,7 @@ async function doResearch() {
 
       // ① Web検索：信頼性の高い一般ページ＋サマリー生成
       callAPI({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-5',
         max_tokens: 1000,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         system: `あなたは中高生の探究学習をサポートするリサーチアシスタントです。
@@ -1365,7 +1365,7 @@ questionsは「なぜ〜なのか」「〜するとどうなるか」「〜と�
 
       // ② 論文検索：日本語論文優先、PDF直リンクを重視
       callAPI({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-5',
         max_tokens: 400,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         system: `「${keyword}」に関する学術論文・研究報告を探してください。
