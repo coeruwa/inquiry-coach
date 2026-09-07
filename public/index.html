@@ -509,6 +509,14 @@ let processing = false;
 let burstTimer = null;
 const BURST_MS = 800;
 
+// レスポンスのcontent配列から最初の「type:text」ブロックの本文を取り出す。
+// Claude Sonnet 5以降はthinkingブロックがtextより前に来ることがあるため、
+// 単純にcontent[0]を使うと空文字を拾ってしまう。
+function firstText(content) {
+  const block = (content || []).find(b => b.type === 'text');
+  return block?.text || '';
+}
+
 // ══════════════════════════════════════════
 //  DOM
 // ══════════════════════════════════════════
@@ -975,7 +983,7 @@ END_CARD
   });
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
-  return data.content?.[0]?.text || '';
+  return firstText(data.content);
 }
 
 // ═══════════════════════════════════════
@@ -1030,7 +1038,7 @@ ${list}
       })
     });
     const data = await res.json();
-    const text = data.content?.[0]?.text || '';
+    const text = firstText(data.content);
     const m = text.match(/\{[\s\S]*\}/);
     if (!m) throw new Error('parse fail');
     const parsed = JSON.parse(m[0]);
