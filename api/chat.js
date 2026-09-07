@@ -27,6 +27,9 @@ export default async function handler(req, res) {
         max_tokens: body.max_tokens || 1000,
         system: body.system || '',
         messages: body.messages || [],
+        // 明示的に無効化しないと、Claude Sonnet 5系は非表示のthinkingブロックに
+        // 出力トークンを消費することがある。このアプリは深い推論が不要なため常時オフ。
+        thinking: body.thinking || { type: 'disabled' },
         ...(body.tools ? { tools: body.tools } : {}),
       }),
     });
